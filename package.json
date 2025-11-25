@@ -1,6 +1,6 @@
 {
   "name": "littlejs-cellular-automata",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "A GridWorld-inspired cellular automata simulation built with LittleJS game engine and strict ECS architecture.",
   "license": "MIT",
   "author": "",
