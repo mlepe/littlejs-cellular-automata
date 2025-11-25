@@ -1,0 +1,55 @@
+{
+  "name": "littlejs-cellular-automata",
+  "version": "0.0.1",
+  "description": "A GridWorld-inspired cellular automata simulation built with LittleJS game engine and strict ECS architecture.",
+  "license": "MIT",
+  "author": "",
+  "main": "index.js",
+  "keywords": [
+    "cellular-automata",
+    "littlejs",
+    "ecs",
+    "simulation",
+    "gridworld"
+  ],
+  "scripts": {
+    "build": "webpack",
+    "serve": "webpack serve",
+    "dev": "npm run build && npm run serve",
+    "test": "jest --passWithNoTests",
+    "test:watch": "jest --watchAll",
+    "clean": "rm -rf node_modules && rm dist/bundle.js",
+    "reinstall": "npm run clean && npm install",
+    "rebuild": "npm run clean && npm install && npm run build",
+    "lint": "eslint src/**/*.ts"
+  },
+  "dependencies": {
+    "littlejsengine": "^1.15.8"
+  },
+  "devDependencies": {
+    "@jest/globals": "^30.2.0",
+    "@stylistic/eslint-plugin": "^5.5.0",
+    "@types/jest": "^29.5.2",
+    "@typescript-eslint/parser": "^8.46.4",
+    "dotenv-webpack": "^8.1.1",
+    "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-spellcheck": "^0.0.20",
+    "html-webpack-plugin": "^5.6.4",
+    "jest": "^29.5.0",
+    "prettier": "^3.6.2",
+    "prettier-eslint": "^16.4.2",
+    "ts-jest": "^29.4.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.2",
+    "webpack": "^5.102.1",
+    "webpack-cli": "^6.0.1",
+    "webpack-dev-server": "^5.2.2",
+    "source-map-loader": "^5.0.0",
+    "ts-loader": "^9.5.4",
+    "@eslint/create-config": "^1.11.0",
+    "@types/lodash": "^4.17.20",
+    "file-loader": "^6.2.0"
+  }
+}

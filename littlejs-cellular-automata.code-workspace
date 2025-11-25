@@ -1,0 +1,131 @@
+{
+	"folders": [
+		{
+			"name": "littlejs-cellular-automata",
+			"path": "."
+		}
+	],
+	"settings":{	// TypeScript settings
+    "typescript.tsdk": "node_modules/typescript/lib",
+    "typescript.enablePromptUseWorkspaceTsdk": true,
+
+    // Editor settings
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": null,
+    "editor.codeActionsOnSave": {
+      //"source.fixAll.eslint": "explicit",
+    },
+
+    "[javascript]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.tabSize": 2,
+    },
+    "javascript.suggest.enabled": true,
+    "javascript.suggest.completeJSDocs": true,
+    "javascript.suggest.jsdoc.generateReturns": true,
+    "[typescript]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.tabSize": 2,
+    },
+    "typescript.suggest.enabled": true,
+    "typescript.suggest.completeJSDocs": true,
+    "typescript.suggest.jsdoc.generateReturns": true,
+    "typescript.updateImportsOnPaste.enabled": false,
+
+    // File associations
+    "files.associations": {
+      "*.ts": "typescript",
+      ".env": "dotenv",
+    },
+
+    // Files to exclude from explorer
+    "files.exclude": {
+      "**/.git": false,
+      "**/.svn": false,
+      "**/.hg": false,
+      "**/.DS_Store": false,
+      "**/Thumbs.db": false,
+      "**/node_modules": false,
+      "**/dist": false,
+    },
+
+    // Search settings
+    "search.exclude": {
+      "**/node_modules": true,
+      "**/dist": true,
+      "**/*.map": true,
+    },
+
+    // ESLint settings
+    "eslint.validate": ["javascript", "typescript"],
+
+    // Prettier settings
+    "prettier.configPath": ".prettierrc",
+
+    // Git settings
+    "git.ignoreLimitWarning": true,
+
+    // Terminal settings
+    "terminal.integrated.cwd": "${workspaceFolder}",
+
+    // File nesting for better organization
+    "explorer.fileNesting.enabled": true,
+    "explorer.fileNesting.patterns": {
+      "*.ts": "${capture}.js, ${capture}.js.map",
+      "package.json": "package-lock.json, tsconfig.json, webpack.config.js, .prettierrc, .eslintrc.json",
+      ".env": ".env.example, .env.local",
+    },
+    "deepscan.enable": true,
+    "typescript.format.semicolons": "insert",
+    "explorerExclude.backup": {
+      "**/.git": true,
+      "**/.svn": true,
+      "**/.hg": true,
+      "**/.DS_Store": true,
+      "**/Thumbs.db": true,
+      "**/node_modules": true,
+      "**/dist": true,
+    },
+  },
+  "extensions": {
+    "recommendations": [
+      // Core development
+      "dbaeumer.vscode-eslint",
+      "esbenp.prettier-vscode",
+
+      // TypeScript & JavaScript
+      "ms-vscode.vscode-typescript-next",
+
+      // Git
+      "eamodio.gitlens",
+
+      // Markdown
+      "yzhang.markdown-all-in-one",
+
+      // Environment files
+      "mikestead.dotenv",
+
+      // Copilot
+      "github.copilot",
+      "github.copilot-chat",
+
+      // Utilities
+      "christian-kohler.path-intellisense",
+      "streetsidesoftware.code-spell-checker",
+    ],
+  },
+  "launch": {
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Launch Dev Server",
+        "type": "chrome",
+        "request": "launch",
+        "url": "http://localhost:8080",
+        "webRoot": "${workspaceFolder}",
+        "preLaunchTask": "npm: serve",
+        "skipFiles": ["<node_internals>/**"],
+      },
+    ],
+  },
+}

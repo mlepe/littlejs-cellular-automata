@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cellular Automata - LittleJS ECS</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: #0a0a0a;
+      color: #ffffff;
+      font-family: 'Courier New', monospace;
+      overflow: hidden;
+    }
+
+    #info {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.85);
+      padding: 15px 20px;
+      border-radius: 8px;
+      font-size: 13px;
+      line-height: 1.8;
+      z-index: 1000;
+      border: 2px solid #4CAF50;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+    }
+
+    #info h3 {
+      margin: 0 0 12px 0;
+      color: #4CAF50;
+      font-size: 18px;
+      text-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+    }
+
+    #info div {
+      margin: 4px 0;
+    }
+
+    .key {
+      color: #FFD700;
+      font-weight: bold;
+      display: inline-block;
+      min-width: 80px;
+    }
+
+    .value {
+      color: #4CAF50;
+      font-weight: bold;
+    }
+
+    .section {
+      margin-top: 12px;
+      padding-top: 8px;
+      border-top: 1px solid #333;
+    }
+
+    #status.running {
+      color: #4CAF50;
+    }
+
+    #status.paused {
+      color: #FF9800;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="info">
+    <h3>🔬 Cellular Automata Lab</h3>
+    <div><span class="key">Space:</span> Pause/Play</div>
+    <div><span class="key">R:</span> Random | <span class="key">C:</span> Clear</div>
+    <div><span class="key">S:</span> Step Forward (paused)</div>
+    <div><span class="key">1-5:</span> Switch Rules</div>
+    <div><span class="key">+/-:</span> Speed Control</div>
+    <div><span class="key">Mouse:</span> Draw/Erase</div>
+    <div class="section">
+      <div><span class="key">Generation:</span> <span class="value" id="generation">0</span></div>
+      <div><span class="key">Population:</span> <span class="value" id="population">0</span></div>
+      <div><span class="key">Density:</span> <span class="value" id="density">0.0%</span></div>
+      <div><span class="key">Rule:</span> <span class="value" id="rule">Game of Life</span></div>
+      <div><span class="key">Speed:</span> <span class="value" id="speed">1.0x</span></div>
+      <div><span class="key">Status:</span> <span class="value running" id="status">Running</span></div>
+    </div>
+  </div>
+</body>
+
+</html>

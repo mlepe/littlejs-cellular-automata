@@ -1,0 +1,1402 @@
+================================================================================
+  LITTLEJS CELLULAR AUTOMATA - COMPLETE PROJECT SOURCE CODE
+  GridWorld-Inspired ECS-Based Simulation
+================================================================================
+
+TABLE OF CONTENTS:
+1. Project Setup & Configuration Files
+2. Core ECS Architecture
+3. Components
+4. Systems
+5. Automata Rules
+6. Grid Manager & Utilities
+7. Game Logic
+8. Setup Instructions
+
+================================================================================
+SECTION 1: PROJECT SETUP & CONFIGURATION FILES
+================================================================================
+
+--------------------------------------------------------------------------------
+FILE: package.json
+--------------------------------------------------------------------------------
+{
+  "name": "littlejs-cellular-automata",
+  "version": "1.0.0",
+  "description": "GridWorld-inspired cellular automata simulation with LittleJS and ECS",
+  "main": "index.js",
+  "scripts": {
+    "build": "webpack --mode production",
+    "dev": "webpack serve --mode development --open",
+    "watch": "webpack --watch --mode development"
+  },
+  "keywords": ["cellular-automata", "littlejs", "ecs", "simulation", "gridworld"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "littlejsengine": "^1.15.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "dotenv-webpack": "^8.0.0",
+    "html-webpack-plugin": "^5.5.0",
+    "ts-loader": "^9.4.0",
+    "typescript": "^5.0.0",
+    "webpack": "^5.88.0",
+    "webpack-cli": "^5.1.0",
+    "webpack-dev-server": "^4.15.0"
+  }
+}
+
+--------------------------------------------------------------------------------
+FILE: tsconfig.json
+--------------------------------------------------------------------------------
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ES2020",
+    "lib": ["ES2020", "DOM"],
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "declaration": true,
+    "sourceMap": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
+
+--------------------------------------------------------------------------------
+FILE: webpack.config.js
+--------------------------------------------------------------------------------
+const path = require('path');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
+const DotenvWebpackPlugin = require('dotenv-webpack');
+
+module.exports = {
+  entry: './src/index.ts',
+  module: {
+    rules: [
+      {
+        test: /\.ts$/,
+        use: 'ts-loader',
+        exclude: /node_modules/,
+      },
+    ],
+  },
+  resolve: {
+    extensions: ['.ts', '.js'],
+  },
+  output: {
+    filename: 'bundle.js',
+    path: path.resolve(__dirname, 'dist'),
+    clean: true,
+  },
+  plugins: [
+    new HtmlWebpackPlugin({
+      template: './src/index.html',
+      title: 'Cellular Automata - LittleJS ECS',
+    }),
+    new DotenvWebpackPlugin(),
+  ],
+  devServer: {
+    static: './dist',
+    hot: true,
+    port: 8080,
+  },
+};
+
+--------------------------------------------------------------------------------
+FILE: .gitignore
+--------------------------------------------------------------------------------
+node_modules/
+dist/
+*.log
+.env
+.DS_Store
+package-lock.json
+
+--------------------------------------------------------------------------------
+FILE: README.md
+--------------------------------------------------------------------------------
+# LittleJS Cellular Automata
+
+A GridWorld-inspired cellular automata simulation built with LittleJS game engine and strict ECS architecture.
+
+## Features
+
+- Multiple automata rules (Game of Life, Brian's Brain, Wireworld, Seeds, HighLife)
+- Interactive cell drawing with mouse
+- Pause/play, step-by-step, and speed control
+- Multiple cell states with color visualization
+- Real-time statistics (population, generation, density)
+- Efficient spatial grid for performance
+
+## Controls
+
+- **Space**: Pause/Resume simulation
+- **R**: Randomize grid
+- **C**: Clear grid
+- **S**: Step forward one generation (when paused)
+- **1-5**: Switch between automata rules
+- **Mouse Left Click**: Draw/toggle cells
+- **+/-**: Increase/decrease simulation speed
+
+## Getting Started
+
+```bash
+npm install
+npm run dev
+```
+
+## Architecture
+
+Built with strict ECS (Entity-Component-System) architecture:
+- **Components**: Pure data (CellComponent, GridPositionComponent, StateComponent)
+- **Systems**: Pure logic (AutomataSystem, RenderSystem, InputSystem)
+- **Grid Manager**: Efficient 2D spatial indexing for fast neighbor queries
+
+## Automata Rules Included
+
+1. **Conway's Game of Life**: Classic cellular automaton
+2. **Brian's Brain**: Three-state automaton with firing neurons
+3. **Wireworld**: Electronic circuit simulation
+4. **Seeds**: High-growth pattern generator
+5. **HighLife**: Game of Life variant with replication
+
+================================================================================
+SECTION 2: ENTRY POINTS & HTML
+================================================================================
+
+--------------------------------------------------------------------------------
+FILE: src/index.html
+--------------------------------------------------------------------------------
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cellular Automata - LittleJS ECS</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background: #0a0a0a;
+            color: #ffffff;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-size: 13px;
+            line-height: 1.8;
+            z-index: 1000;
+            border: 2px solid #4CAF50;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+        }
+        #info h3 {
+            margin: 0 0 12px 0;
+            color: #4CAF50;
+            font-size: 18px;
+            text-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+        }
+        #info div {
+            margin: 4px 0;
+        }
+        .key {
+            color: #FFD700;
+            font-weight: bold;
+            display: inline-block;
+            min-width: 80px;
+        }
+        .value {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        .section {
+            margin-top: 12px;
+            padding-top: 8px;
+            border-top: 1px solid #333;
+        }
+        #status.running { color: #4CAF50; }
+        #status.paused { color: #FF9800; }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <h3>🔬 Cellular Automata Lab</h3>
+        <div><span class="key">Space:</span> Pause/Play</div>
+        <div><span class="key">R:</span> Random | <span class="key">C:</span> Clear</div>
+        <div><span class="key">S:</span> Step Forward (paused)</div>
+        <div><span class="key">1-5:</span> Switch Rules</div>
+        <div><span class="key">+/-:</span> Speed Control</div>
+        <div><span class="key">Mouse:</span> Draw/Erase</div>
+        <div class="section">
+            <div><span class="key">Generation:</span> <span class="value" id="generation">0</span></div>
+            <div><span class="key">Population:</span> <span class="value" id="population">0</span></div>
+            <div><span class="key">Density:</span> <span class="value" id="density">0.0%</span></div>
+            <div><span class="key">Rule:</span> <span class="value" id="rule">Game of Life</span></div>
+            <div><span class="key">Speed:</span> <span class="value" id="speed">1.0x</span></div>
+            <div><span class="key">Status:</span> <span class="value running" id="status">Running</span></div>
+        </div>
+    </div>
+</body>
+</html>
+
+--------------------------------------------------------------------------------
+FILE: src/index.ts
+--------------------------------------------------------------------------------
+import * as LJS from 'littlejsengine';
+import { CellularAutomataGame } from './game';
+
+// Game configuration
+const GRID_WIDTH = 120;
+const GRID_HEIGHT = 80;
+const CELL_SIZE = 0.5;
+
+// Initialize game
+const game = new CellularAutomataGame(GRID_WIDTH, GRID_HEIGHT, CELL_SIZE);
+
+// Start LittleJS engine
+LJS.engineInit(
+  async () => await game.init(),
+  () => game.update(),
+  () => game.updatePost(),
+  () => game.render(),
+  () => game.renderPost(),
+  [] // No images to preload
+);
+
+================================================================================
+SECTION 3: CORE ECS ARCHITECTURE
+================================================================================
+
+--------------------------------------------------------------------------------
+FILE: src/ecs.ts
+--------------------------------------------------------------------------------
+/**
+ * Entity ID type - just a number
+ */
+export type EntityId = number;
+
+/**
+ * Component interface - all components must have a type discriminator
+ */
+export interface Component {
+  type: string;
+}
+
+/**
+ * Game event for EventBus
+ */
+export interface GameEvent {
+  type: string;
+  data: any;
+}
+
+/**
+ * ECS - Entity Component System core
+ */
+export class ECS {
+  private nextEntityId: EntityId = 0;
+  private entities: Set<EntityId> = new Set();
+  private components: Map<string, Map<EntityId, Component>> = new Map();
+  private systems: System[] = [];
+
+  createEntity(): EntityId {
+    const id = this.nextEntityId++;
+    this.entities.add(id);
+    return id;
+  }
+
+  addComponent(entityId: EntityId, component: Component): void {
+    if (!this.components.has(component.type)) {
+      this.components.set(component.type, new Map());
+    }
+    this.components.get(component.type)!.set(entityId, component);
+  }
+
+  getComponent<T extends Component>(entityId: EntityId, type: string): T | undefined {
+    return this.components.get(type)?.get(entityId) as T | undefined;
+  }
+
+  removeComponent(entityId: EntityId, type: string): void {
+    this.components.get(type)?.delete(entityId);
+  }
+
+  removeEntity(entityId: EntityId): void {
+    this.entities.delete(entityId);
+    this.components.forEach(componentMap => componentMap.delete(entityId));
+  }
+
+  getEntitiesWith(...componentTypes: string[]): EntityId[] {
+    return Array.from(this.entities).filter(entityId => {
+      return componentTypes.every(type => this.components.get(type)?.has(entityId));
+    });
+  }
+
+  addSystem(system: System): void {
+    this.systems.push(system);
+  }
+
+  update(deltaTime: number): void {
+    this.systems.forEach(system => system.update(this, deltaTime));
+  }
+
+  getAllEntities(): EntityId[] {
+    return Array.from(this.entities);
+  }
+
+  clear(): void {
+    this.entities.clear();
+    this.components.clear();
+  }
+}
+
+/**
+ * System base class
+ */
+export class System {
+  update(ecs: ECS, deltaTime: number): void {
+    // Override in subclasses
+  }
+}
+
+/**
+ * EventBus for system communication
+ */
+export class EventBus {
+  private listeners: Map<string, ((event: GameEvent) => void)[]> = new Map();
+
+  emit(event: GameEvent): void {
+    this.listeners.get(event.type)?.forEach(callback => callback(event));
+  }
+
+  on(eventType: string, callback: (event: GameEvent) => void): void {
+    if (!this.listeners.has(eventType)) {
+      this.listeners.set(eventType, []);
+    }
+    this.listeners.get(eventType)!.push(callback);
+  }
+
+  off(eventType: string, callback: (event: GameEvent) => void): void {
+    const listeners = this.listeners.get(eventType);
+    if (listeners) {
+      const index = listeners.indexOf(callback);
+      if (index > -1) {
+        listeners.splice(index, 1);
+      }
+    }
+  }
+}
+
+/**
+ * EntityBuilder - fluent API for creating entities
+ */
+export class EntityBuilder {
+  constructor(private ecs: ECS, private entityId: EntityId) {}
+
+  withComponent<T extends Component>(component: T): this {
+    this.ecs.addComponent(this.entityId, component);
+    return this;
+  }
+
+  build(): EntityId {
+    return this.entityId;
+  }
+
+  static create(ecs: ECS): EntityBuilder {
+    return new EntityBuilder(ecs, ecs.createEntity());
+  }
+}
+
+================================================================================
+SECTION 4: TYPES
+================================================================================
+
+--------------------------------------------------------------------------------
+FILE: src/types/index.ts
+--------------------------------------------------------------------------------
+export * from './cellState';
+
+--------------------------------------------------------------------------------
+FILE: src/types/cellState.ts
+--------------------------------------------------------------------------------
+/**
+ * Cell state enumeration
+ */
+export const enum CellState {
+  Dead = 0,
+  Alive = 1,
+  Dying = 2,
+  Firing = 3,
+  Conductor = 4,
+  ElectronHead = 5,
+  ElectronTail = 6,
+}
+
+/**
+ * Get color for cell state
+ */
+export function getCellColor(state: CellState, age: number = 0): string {
+  switch (state) {
+    case CellState.Alive:
+      // Gradient from green to yellow based on age
+      const ageRatio = Math.min(age / 20, 1);
+      const r = Math.floor(76 + ageRatio * (255 - 76));
+      const g = 175;
+      const b = Math.floor(80 - ageRatio * 80);
+      return `rgb(${r},${g},${b})`;
+    
+    case CellState.Dead:
+      return '#1a1a1a';
+    
+    case CellState.Dying:
+      return '#ff6b6b';
+    
+    case CellState.Firing:
+      return '#ffd700';
+    
+    case CellState.Conductor:
+      return '#4a90e2';
+    
+    case CellState.ElectronHead:
+      return '#00ffff';
+    
+    case CellState.ElectronTail:
+      return '#ff00ff';
+    
+    default:
+      return '#ffffff';
+  }
+}
+
+================================================================================
+SECTION 5: COMPONENTS
+================================================================================
+
+--------------------------------------------------------------------------------
+FILE: src/components/index.ts
+--------------------------------------------------------------------------------
+export * from './cellComponent';
+export * from './gridPositionComponent';
+export * from './stateComponent';
+
+--------------------------------------------------------------------------------
+FILE: src/components/cellComponent.ts
+--------------------------------------------------------------------------------
+import { Component } from '../ecs';
+
+/**
+ * CellComponent - Marks an entity as a cell
+ */
+export interface CellComponent extends Component {
+  type: 'cell';
+  age: number;
+  generation: number;
+}
+
+--------------------------------------------------------------------------------
+FILE: src/components/gridPositionComponent.ts
+--------------------------------------------------------------------------------
+import { Component } from '../ecs';
+
+/**
+ * GridPositionComponent - Position in grid
+ */
+export interface GridPositionComponent extends Component {
+  type: 'gridPosition';
+  x: number;
+  y: number;
+}
+
+--------------------------------------------------------------------------------
+FILE: src/components/stateComponent.ts
+--------------------------------------------------------------------------------
+import { Component } from '../ecs';
+import { CellState } from '../types';
+
+/**
+ * StateComponent - Current state of cell
+ */
+export interface StateComponent extends Component {
+  type: 'state';
+  current: CellState;
+  next: CellState;
+}
+
+================================================================================
+SECTION 6: SYSTEMS
+================================================================================
+
+--------------------------------------------------------------------------------
+FILE: src/systems/index.ts
+--------------------------------------------------------------------------------
+export * from './automataSystem';
+export * from './renderSystem';
+export * from './inputSystem';
+export * from './uiSystem';
+
+--------------------------------------------------------------------------------
+FILE: src/systems/automataSystem.ts
+--------------------------------------------------------------------------------
+import { System, ECS } from '../ecs';
+import { CellComponent, GridPositionComponent, StateComponent } from '../components';
+import { Grid } from '../grid';
+import { AutomataRule } from '../rules/ruleBase';
+import { CellState } from '../types';
+
+/**
+ * AutomataSystem - Updates cell states based on rules
+ */
+export class AutomataSystem extends System {
+  private updateTimer: number = 0;
+  private updateInterval: number = 0.1; // 10 updates per second default
+  private isPaused: boolean = false;
+  private generation: number = 0;
+
+  constructor(
+    private grid: Grid,
+    private rule: AutomataRule
+  ) {
+    super();
+  }
+
+  setRule(rule: AutomataRule): void {
+    this.rule = rule;
+    this.generation = 0;
+  }
+
+  setSpeed(speed: number): void {
+    this.updateInterval = 1 / (10 * speed); // speed multiplier
+  }
+
+  setPaused(paused: boolean): void {
+    this.isPaused = paused;
+  }
+
+  step(): void {
+    this.processGeneration();
+  }
+
+  reset(): void {
+    this.generation = 0;
+  }
+
+  update(ecs: ECS, deltaTime: number): void {
+    if (this.isPaused) return;
+
+    this.updateTimer += deltaTime;
+    if (this.updateTimer >= this.updateInterval) {
+      this.updateTimer = 0;
+      this.processGeneration();
+    }
+  }
+
+  private processGeneration(): void {
+    const cells = this.grid.getAllCells();
+
+    // Calculate next state for all cells
+    cells.forEach(entityId => {
+      const pos = this.grid.getPosition(entityId);
+      const state = this.grid.getState(entityId);
+      const cell = this.grid.getCell(entityId);
+      
+      if (!pos || !state || !cell) return;
+
+      const neighbors = this.grid.getNeighbors(pos.x, pos.y);
+      const neighborStates = neighbors
+        .map(id => this.grid.getState(id)?.current)
+        .filter(s => s !== undefined) as CellState[];
+
+      state.next = this.rule.computeNextState(state.current, neighborStates, cell.age);
+    });
+
+    // Apply next state and update ages
+    cells.forEach(entityId => {
+      const state = this.grid.getState(entityId);
+      const cell = this.grid.getCell(entityId);
+      
+      if (!state || !cell) return;
+
+      const wasAlive = state.current === CellState.Alive;
+      state.current = state.next;
+      const isAlive = state.current === CellState.Alive;
+
+      if (isAlive) {
+        cell.age++;
+      } else {
+        cell.age = 0;
+      }
+
+      if (isAlive && !wasAlive) {
+        cell.generation = this.generation;
+      }
+    });
+
+    this.generation++;
+  }
+
+  getGeneration(): number {
+    return this.generation;
+  }
+
+  getIsPaused(): boolean {
+    return this.isPaused;
+  }
+}
+
+--------------------------------------------------------------------------------
+FILE: src/systems/renderSystem.ts
+--------------------------------------------------------------------------------
+import * as LJS from 'littlejsengine';
+import { System, ECS } from '../ecs';
+import { Grid } from '../grid';
+import { getCellColor } from '../types';
+import { CellState } from '../types';
+
+/**
+ * RenderSystem - Renders cells to screen
+ */
+export class RenderSystem extends System {
+  constructor(
+    private grid: Grid,
+    private cellSize: number
+  ) {
+    super();
+  }
+
+  render(ecs: ECS): void {
+    const cells = this.grid.getAllCells();
+
+    cells.forEach(entityId => {
+      const pos = this.grid.getPosition(entityId);
+      const state = this.grid.getState(entityId);
+      const cell = this.grid.getCell(entityId);
+
+      if (!pos || !state || !cell) return;
+      if (state.current === CellState.Dead) return; // Don't render dead cells
+
+      const x = pos.x * this.cellSize;
+      const y = pos.y * this.cellSize;
+      const color = getCellColor(state.current, cell.age);
+
+      // Draw filled rectangle
+      LJS.drawRect(
+        LJS.vec2(x, y),
+        LJS.vec2(this.cellSize * 0.9, this.cellSize * 0.9),
+        new LJS.Color().setHex(color)
+      );
+    });
+  }
+}
+
+--------------------------------------------------------------------------------
+FILE: src/systems/inputSystem.ts
+--------------------------------------------------------------------------------
+import * as LJS from 'littlejsengine';
+import { System, ECS, EventBus } from '../ecs';
+import { Grid } from '../grid';
+import { CellState } from '../types';
+
+/**
+ * InputSystem - Handles user input
+ */
+export class InputSystem extends System {
+  private readonly keys = {
+    pause: 'Space',
+    random: 'KeyR',
+    clear: 'KeyC',
+    step: 'KeyS',
+    rule1: 'Digit1',
+    rule2: 'Digit2',
+    rule3: 'Digit3',
+    rule4: 'Digit4',
+    rule5: 'Digit5',
+    speedUp: 'Equal',
+    speedDown: 'Minus',
+  };
+
+  constructor(
+    private grid: Grid,
+    private cellSize: number,
+    private eventBus: EventBus
+  ) {
+    super();
+  }
+
+  update(ecs: ECS, deltaTime: number): void {
+    // Keyboard input
+    if (LJS.keyWasPressed(this.keys.pause)) {
+      this.eventBus.emit({ type: 'input:pause', data: {} });
+    }
+    if (LJS.keyWasPressed(this.keys.random)) {
+      this.eventBus.emit({ type: 'input:random', data: {} });
+    }
+    if (LJS.keyWasPressed(this.keys.clear)) {
+      this.eventBus.emit({ type: 'input:clear', data: {} });
+    }
+    if (LJS.keyWasPressed(this.keys.step)) {
+      this.eventBus.emit({ type: 'input:step', data: {} });
+    }
+    if (LJS.keyWasPressed(this.keys.rule1)) {
+      this.eventBus.emit({ type: 'input:rule', data: { ruleIndex: 0 } });
+    }
+    if (LJS.keyWasPressed(this.keys.rule2)) {
+      this.eventBus.emit({ type: 'input:rule', data: { ruleIndex: 1 } });
+    }
+    if (LJS.keyWasPressed(this.keys.rule3)) {
+      this.eventBus.emit({ type: 'input:rule', data: { ruleIndex: 2 } });
+    }
+    if (LJS.keyWasPressed(this.keys.rule4)) {
+      this.eventBus.emit({ type: 'input:rule', data: { ruleIndex: 3 } });
+    }
+    if (LJS.keyWasPressed(this.keys.rule5)) {
+      this.eventBus.emit({ type: 'input:rule', data: { ruleIndex: 4 } });
+    }
+    if (LJS.keyWasPressed(this.keys.speedUp)) {
+      this.eventBus.emit({ type: 'input:speedUp', data: {} });
+    }
+    if (LJS.keyWasPressed(this.keys.speedDown)) {
+      this.eventBus.emit({ type: 'input:speedDown', data: {} });
+    }
+
+    // Mouse input for drawing
+    if (LJS.mouseIsDown(0)) {
+      this.handleMouseDraw(true);
+    }
+    if (LJS.mouseIsDown(2)) {
+      this.handleMouseDraw(false);
+    }
+  }
+
+  private handleMouseDraw(setAlive: boolean): void {
+    const mousePos = LJS.mousePos;
+    const gridX = Math.floor(mousePos.x / this.cellSize);
+    const gridY = Math.floor(mousePos.y / this.cellSize);
+
+    const entityId = this.grid.getCellAt(gridX, gridY);
+    if (entityId !== undefined) {
+      const state = this.grid.getState(entityId);
+      if (state) {
+        state.current = setAlive ? CellState.Alive : CellState.Dead;
+        state.next = state.current;
+      }
+    }
+  }
+}
+
+--------------------------------------------------------------------------------
+FILE: src/systems/uiSystem.ts
+--------------------------------------------------------------------------------
+import { System, ECS, EventBus } from '../ecs';
+import { Grid } from '../grid';
+
+/**
+ * UISystem - Updates UI elements
+ */
+export class UISystem extends System {
+  private generation: number = 0;
+  private ruleName: string = '';
+  private isPaused: boolean = false;
+  private speed: number = 1.0;
+
+  constructor(
+    private grid: Grid,
+    private eventBus: EventBus
+  ) {
+    super();
+  }
+
+  setGeneration(gen: number): void {
+    this.generation = gen;
+  }
+
+  setRuleName(name: string): void {
+    this.ruleName = name;
+  }
+
+  setPaused(paused: boolean): void {
+    this.isPaused = paused;
+  }
+
+  setSpeed(speed: number): void {
+    this.speed = speed;
+  }
+
+  update(ecs: ECS, deltaTime: number): void {
+    const population = this.grid.getAliveCount();
+    const density = (population / this.grid.getTotalCells()) * 100;
+
+    this.updateElement('generation', this.generation.toString());
+    this.updateElement('population', population.toString());
+    this.updateElement('density', density.toFixed(2) + '%');
+    this.updateElement('rule', this.ruleName);
+    this.updateElement('speed', this.speed.toFixed(1) + 'x');
+    this.updateStatusElement(this.isPaused ? 'Paused' : 'Running');
+  }
+
+  private updateElement(id: string, value: string): void {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+  }
+
+  private updateStatusElement(value: string): void {
+    const el = document.getElementById('status');
+    if (el) {
+      el.textContent = value;
+      el.className = 'value ' + (value === 'Running' ? 'running' : 'paused');
+    }
+  }
+}
+
+================================================================================
+SECTION 7: AUTOMATA RULES
+================================================================================
+
+--------------------------------------------------------------------------------
+FILE: src/rules/index.ts
+--------------------------------------------------------------------------------
+export * from './ruleBase';
+export * from './gameOfLife';
+export * from './briansBrain';
+export * from './wireworld';
+export * from './seeds';
+export * from './highLife';
+
+--------------------------------------------------------------------------------
+FILE: src/rules/ruleBase.ts
+--------------------------------------------------------------------------------
+import { CellState } from '../types';
+
+/**
+ * AutomataRule - Base interface for cellular automata rules
+ */
+export interface AutomataRule {
+  name: string;
+  computeNextState(current: CellState, neighbors: CellState[], age: number): CellState;
+}
+
+/**
+ * Count neighbors in a specific state
+ */
+export function countNeighborsInState(neighbors: CellState[], state: CellState): number {
+  return neighbors.filter(s => s === state).length;
+}
+
+--------------------------------------------------------------------------------
+FILE: src/rules/gameOfLife.ts
+--------------------------------------------------------------------------------
+import { CellState } from '../types';
+import { AutomataRule, countNeighborsInState } from './ruleBase';
+
+/**
+ * Conway's Game of Life
+ */
+export class GameOfLife implements AutomataRule {
+  name = 'Game of Life';
+
+  computeNextState(current: CellState, neighbors: CellState[]): CellState {
+    const aliveNeighbors = countNeighborsInState(neighbors, CellState.Alive);
+
+    if (current === CellState.Alive) {
+      // Survival: 2 or 3 neighbors
+      return (aliveNeighbors === 2 || aliveNeighbors === 3) 
+        ? CellState.Alive 
+        : CellState.Dead;
+    } else {
+      // Birth: exactly 3 neighbors
+      return aliveNeighbors === 3 ? CellState.Alive : CellState.Dead;
+    }
+  }
+}
+
+--------------------------------------------------------------------------------
+FILE: src/rules/briansBrain.ts
+--------------------------------------------------------------------------------
+import { CellState } from '../types';
+import { AutomataRule, countNeighborsInState } from './ruleBase';
+
+/**
+ * Brian's Brain - three-state automaton
+ */
+export class BriansBrain implements AutomataRule {
+  name = "Brian's Brain";
+
+  computeNextState(current: CellState, neighbors: CellState[]): CellState {
+    const firingNeighbors = countNeighborsInState(neighbors, CellState.Firing);
+
+    if (current === CellState.Firing) {
+      return CellState.Dying;
+    } else if (current === CellState.Dying) {
+      return CellState.Dead;
+    } else {
+      // Dead cells become firing if exactly 2 neighbors are firing
+      return firingNeighbors === 2 ? CellState.Firing : CellState.Dead;
+    }
+  }
+}
+
+--------------------------------------------------------------------------------
+FILE: src/rules/wireworld.ts
+--------------------------------------------------------------------------------
+import { CellState } from '../types';
+import { AutomataRule, countNeighborsInState } from './ruleBase';
+
+/**
+ * Wireworld - electronic circuit simulation
+ */
+export class Wireworld implements AutomataRule {
+  name = 'Wireworld';
+
+  computeNextState(current: CellState, neighbors: CellState[]): CellState {
+    if (current === CellState.Dead) {
+      return CellState.Dead;
+    }
+
+    if (current === CellState.ElectronHead) {
+      return CellState.ElectronTail;
+    }
+
+    if (current === CellState.ElectronTail) {
+      return CellState.Conductor;
+    }
+
+    if (current === CellState.Conductor) {
+      const headNeighbors = countNeighborsInState(neighbors, CellState.ElectronHead);
+      return (headNeighbors === 1 || headNeighbors === 2) 
+        ? CellState.ElectronHead 
+        : CellState.Conductor;
+    }
+
+    return current;
+  }
+}
+
+--------------------------------------------------------------------------------
+FILE: src/rules/seeds.ts
+--------------------------------------------------------------------------------
+import { CellState } from '../types';
+import { AutomataRule, countNeighborsInState } from './ruleBase';
+
+/**
+ * Seeds - high-growth pattern generator
+ */
+export class Seeds implements AutomataRule {
+  name = 'Seeds';
+
+  computeNextState(current: CellState, neighbors: CellState[]): CellState {
+    const aliveNeighbors = countNeighborsInState(neighbors, CellState.Alive);
+
+    if (current === CellState.Alive) {
+      return CellState.Dead;
+    } else {
+      return aliveNeighbors === 2 ? CellState.Alive : CellState.Dead;
+    }
+  }
+}
+
+--------------------------------------------------------------------------------
+FILE: src/rules/highLife.ts
+--------------------------------------------------------------------------------
+import { CellState } from '../types';
+import { AutomataRule, countNeighborsInState } from './ruleBase';
+
+/**
+ * HighLife - Game of Life variant with replication
+ */
+export class HighLife implements AutomataRule {
+  name = 'HighLife';
+
+  computeNextState(current: CellState, neighbors: CellState[]): CellState {
+    const aliveNeighbors = countNeighborsInState(neighbors, CellState.Alive);
+
+    if (current === CellState.Alive) {
+      return (aliveNeighbors === 2 || aliveNeighbors === 3) 
+        ? CellState.Alive 
+        : CellState.Dead;
+    } else {
+      return (aliveNeighbors === 3 || aliveNeighbors === 6) 
+        ? CellState.Alive 
+        : CellState.Dead;
+    }
+  }
+}
+
+================================================================================
+SECTION 8: GRID MANAGER
+================================================================================
+
+--------------------------------------------------------------------------------
+FILE: src/grid.ts
+--------------------------------------------------------------------------------
+import { ECS, EntityId, EntityBuilder } from './ecs';
+import { CellComponent, GridPositionComponent, StateComponent } from './components';
+import { CellState } from './types';
+
+/**
+ * Grid - Manages spatial organization of cells
+ */
+export class Grid {
+  private cells: (EntityId | undefined)[][] = [];
+  private allCells: Set<EntityId> = new Set();
+
+  constructor(
+    private ecs: ECS,
+    private width: number,
+    private height: number
+  ) {
+    this.initializeGrid();
+  }
+
+  private initializeGrid(): void {
+    for (let y = 0; y < this.height; y++) {
+      this.cells[y] = [];
+      for (let x = 0; x < this.width; x++) {
+        const entityId = this.createCell(x, y);
+        this.cells[y][x] = entityId;
+        this.allCells.add(entityId);
+      }
+    }
+  }
+
+  private createCell(x: number, y: number): EntityId {
+    return EntityBuilder.create(this.ecs)
+      .withComponent<GridPositionComponent>({
+        type: 'gridPosition',
+        x,
+        y,
+      })
+      .withComponent<StateComponent>({
+        type: 'state',
+        current: CellState.Dead,
+        next: CellState.Dead,
+      })
+      .withComponent<CellComponent>({
+        type: 'cell',
+        age: 0,
+        generation: 0,
+      })
+      .build();
+  }
+
+  getCellAt(x: number, y: number): EntityId | undefined {
+    if (x < 0 || x >= this.width || y < 0 || y >= this.height) {
+      return undefined;
+    }
+    return this.cells[y][x];
+  }
+
+  getNeighbors(x: number, y: number): EntityId[] {
+    const neighbors: EntityId[] = [];
+    const offsets = [
+      [-1, -1], [0, -1], [1, -1],
+      [-1,  0],          [1,  0],
+      [-1,  1], [0,  1], [1,  1],
+    ];
+
+    offsets.forEach(([dx, dy]) => {
+      const nx = x + dx;
+      const ny = y + dy;
+      const neighbor = this.getCellAt(nx, ny);
+      if (neighbor !== undefined) {
+        neighbors.push(neighbor);
+      }
+    });
+
+    return neighbors;
+  }
+
+  getAllCells(): EntityId[] {
+    return Array.from(this.allCells);
+  }
+
+  getPosition(entityId: EntityId): GridPositionComponent | undefined {
+    return this.ecs.getComponent<GridPositionComponent>(entityId, 'gridPosition');
+  }
+
+  getState(entityId: EntityId): StateComponent | undefined {
+    return this.ecs.getComponent<StateComponent>(entityId, 'state');
+  }
+
+  getCell(entityId: EntityId): CellComponent | undefined {
+    return this.ecs.getComponent<CellComponent>(entityId, 'cell');
+  }
+
+  getAliveCount(): number {
+    return this.getAllCells().filter(id => {
+      const state = this.getState(id);
+      return state && state.current === CellState.Alive;
+    }).length;
+  }
+
+  getTotalCells(): number {
+    return this.width * this.height;
+  }
+
+  clear(): void {
+    this.getAllCells().forEach(id => {
+      const state = this.getState(id);
+      const cell = this.getCell(id);
+      if (state) {
+        state.current = CellState.Dead;
+        state.next = CellState.Dead;
+      }
+      if (cell) {
+        cell.age = 0;
+        cell.generation = 0;
+      }
+    });
+  }
+
+  randomize(probability: number = 0.3): void {
+    this.getAllCells().forEach(id => {
+      const state = this.getState(id);
+      if (state) {
+        state.current = Math.random() < probability ? CellState.Alive : CellState.Dead;
+        state.next = state.current;
+      }
+    });
+  }
+}
+
+================================================================================
+SECTION 9: GAME LOGIC
+================================================================================
+
+--------------------------------------------------------------------------------
+FILE: src/game.ts
+--------------------------------------------------------------------------------
+import * as LJS from 'littlejsengine';
+import { ECS, EventBus } from './ecs';
+import { Grid } from './grid';
+import { AutomataSystem, RenderSystem, InputSystem, UISystem } from './systems';
+import { 
+  GameOfLife, 
+  BriansBrain, 
+  Wireworld, 
+  Seeds, 
+  HighLife,
+  AutomataRule 
+} from './rules';
+
+/**
+ * CellularAutomataGame - Main game controller
+ */
+export class CellularAutomataGame {
+  private ecs: ECS;
+  private eventBus: EventBus;
+  private grid: Grid;
+  private automataSystem: AutomataSystem;
+  private renderSystem: RenderSystem;
+  private inputSystem: InputSystem;
+  private uiSystem: UISystem;
+  private rules: AutomataRule[];
+  private currentRuleIndex: number = 0;
+  private speed: number = 1.0;
+
+  constructor(
+    private gridWidth: number,
+    private gridHeight: number,
+    private cellSize: number
+  ) {
+    this.ecs = new ECS();
+    this.eventBus = new EventBus();
+    this.grid = new Grid(this.ecs, gridWidth, gridHeight);
+
+    // Initialize rules
+    this.rules = [
+      new GameOfLife(),
+      new BriansBrain(),
+      new Wireworld(),
+      new Seeds(),
+      new HighLife(),
+    ];
+
+    // Initialize systems
+    this.automataSystem = new AutomataSystem(this.grid, this.rules[0]);
+    this.renderSystem = new RenderSystem(this.grid, cellSize);
+    this.inputSystem = new InputSystem(this.grid, cellSize, this.eventBus);
+    this.uiSystem = new UISystem(this.grid, this.eventBus);
+
+    this.ecs.addSystem(this.automataSystem);
+    this.ecs.addSystem(this.inputSystem);
+    this.ecs.addSystem(this.uiSystem);
+
+    this.setupEventListeners();
+    this.setupCamera();
+    this.uiSystem.setRuleName(this.rules[0].name);
+  }
+
+  private setupCamera(): void {
+    const worldWidth = this.gridWidth * this.cellSize;
+    const worldHeight = this.gridHeight * this.cellSize;
+    LJS.setCameraPos(LJS.vec2(worldWidth / 2, worldHeight / 2));
+    LJS.setCameraScale(30);
+  }
+
+  private setupEventListeners(): void {
+    this.eventBus.on('input:pause', () => {
+      const isPaused = !this.automataSystem.getIsPaused();
+      this.automataSystem.setPaused(isPaused);
+      this.uiSystem.setPaused(isPaused);
+    });
+
+    this.eventBus.on('input:random', () => {
+      this.grid.randomize(0.3);
+      this.automataSystem.reset();
+    });
+
+    this.eventBus.on('input:clear', () => {
+      this.grid.clear();
+      this.automataSystem.reset();
+    });
+
+    this.eventBus.on('input:step', () => {
+      if (this.automataSystem.getIsPaused()) {
+        this.automataSystem.step();
+      }
+    });
+
+    this.eventBus.on('input:rule', (event) => {
+      const ruleIndex = event.data.ruleIndex;
+      if (ruleIndex >= 0 && ruleIndex < this.rules.length) {
+        this.currentRuleIndex = ruleIndex;
+        this.automataSystem.setRule(this.rules[ruleIndex]);
+        this.uiSystem.setRuleName(this.rules[ruleIndex].name);
+        this.grid.clear();
+      }
+    });
+
+    this.eventBus.on('input:speedUp', () => {
+      this.speed = Math.min(this.speed + 0.5, 5.0);
+      this.automataSystem.setSpeed(this.speed);
+      this.uiSystem.setSpeed(this.speed);
+    });
+
+    this.eventBus.on('input:speedDown', () => {
+      this.speed = Math.max(this.speed - 0.5, 0.5);
+      this.automataSystem.setSpeed(this.speed);
+      this.uiSystem.setSpeed(this.speed);
+    });
+  }
+
+  async init(): Promise<void> {
+    // Initialize with random pattern
+    this.grid.randomize(0.2);
+  }
+
+  update(): void {
+    this.ecs.update(LJS.timeDelta);
+    this.uiSystem.setGeneration(this.automataSystem.getGeneration());
+  }
+
+  updatePost(): void {
+    // Post-update logic
+  }
+
+  render(): void {
+    this.renderSystem.render(this.ecs);
+  }
+
+  renderPost(): void {
+    // Post-render logic
+  }
+}
+
+================================================================================
+SECTION 10: SETUP INSTRUCTIONS
+================================================================================
+
+STEP 1: CREATE PROJECT DIRECTORY
+---------------------------------
+mkdir littlejs-cellular-automata
+cd littlejs-cellular-automata
+git init
+
+STEP 2: CREATE FOLDER STRUCTURE
+--------------------------------
+mkdir src
+mkdir src\components
+mkdir src\systems
+mkdir src\rules
+mkdir src\types
+
+STEP 3: INSTALL DEPENDENCIES
+-----------------------------
+npm init -y
+npm install littlejsengine
+npm install --save-dev typescript webpack webpack-cli webpack-dev-server ts-loader html-webpack-plugin dotenv-webpack @types/node
+
+STEP 4: COPY ALL FILES
+----------------------
+Copy each file from this document into its corresponding location in your project.
+
+STEP 5: BUILD AND RUN
+---------------------
+npm run dev
+
+The game will open in your browser at http://localhost:8080
+
+================================================================================
+PROJECT FEATURES IMPLEMENTED
+================================================================================
+
+✅ ECS Architecture (Entity-Component-System)
+✅ Grid-based Spatial Management
+✅ 5 Automata Rules (Game of Life, Brian's Brain, Wireworld, Seeds, HighLife)
+✅ Interactive Cell Drawing with Mouse
+✅ Keyboard Controls (Pause, Random, Clear, Step, Rule Switching, Speed Control)
+✅ Real-time Statistics Display (Generation, Population, Density)
+✅ Color-coded Cell Visualization with Age Gradients
+✅ Efficient Neighbor Query System
+✅ TypeScript with Strict Type Checking
+✅ Webpack Build System
+✅ Hot Module Reloading for Development
+
+================================================================================
+CUSTOMIZATION IDEAS
+================================================================================
+
+1. Add more automata rules (Langton's Ant, Day & Night, etc.)
+2. Implement pattern save/load system
+3. Add zoom/pan camera controls
+4. Create pattern library (gliders, spaceships, oscillators)
+5. Add heatmap visualization modes
+6. Implement brush sizes for drawing
+7. Add sound effects for births/deaths
+8. Create time-lapse recording feature
+9. Add statistics graphs (population over time)
+10. Implement infinite grid with chunk loading
+
+================================================================================
+END OF FILE
+================================================================================
+
+This file contains the complete source code for the LittleJS Cellular Automata
+project. Copy each section into the corresponding file in your project structure.
+
+For questions or issues, refer to:
+- LittleJS Documentation: https://killedbyapixel.github.io/LittleJS/docs
+- Your roguelike project's ECS implementation for reference
+
+Happy coding! 🔬🎮
